@@ -1,0 +1,20 @@
+global using System;
+global using System.Collections.Generic;
+global using System.Linq;
+global using System.Numerics;
+global using Dalamud.Bindings.ImGui;
+global using Dalamud.Interface;
+global using Dalamud.Interface.Utility;
+global using Dalamud.Interface.Utility.Raii;
+global using Dalamud.Interface.Windowing;
+global using Dalamud.Plugin;
+global using ECommons;
+global using ECommons.DalamudServices;
+global using ECommons.ImGuiMethods;
+global using ECommons.Logging;
+global using static ECommons.GenericHelpers;
+global using static GilTradeTracker.Plugin;
+
+global using GilTradeTracker.Config;
+global using GilTradeTracker.Services;
+global using GilTradeTracker.UI;

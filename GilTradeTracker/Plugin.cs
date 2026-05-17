@@ -1,77 +1,91 @@
-using System;
 using Dalamud.Game.Command;
-using Dalamud.Plugin;
-using Dalamud.Plugin.Services;
+using ECommons.Configuration;
+using ECommons.Schedulers;
 
 namespace GilTradeTracker;
 
 public sealed class Plugin : IDalamudPlugin
 {
+    public static Plugin P { get; private set; } = null!;
+    public static Configuration C { get; private set; } = null!;
+
     private const string CommandName = "/giltracker";
 
-    private readonly ICommandManager commandManager;
-    private readonly MainWindow mainWindow;
+    public readonly WindowSystem WindowSystem = new("GilTradeTracker");
 
-    public IDalamudPluginInterface PluginInterface { get; }
+    private MainWindow _mainWindow = null!;
+    private ConfigWindow _configWindow = null!;
+    private GilTracker _gilTracker = null!;
 
-    public ITargetManager TargetManager { get; }
-
-    public Configuration Configuration { get; }
-
-    public Plugin(
-        IDalamudPluginInterface pluginInterface,
-        ICommandManager commandManager,
-        ITargetManager targetManager)
+    public Plugin(IDalamudPluginInterface pluginInterface)
     {
-        this.PluginInterface = pluginInterface;
-        this.commandManager = commandManager;
-        this.TargetManager = targetManager;
+        P = this;
+        ECommonsMain.Init(pluginInterface, this);
 
-        this.Configuration =
-            this.PluginInterface.GetPluginConfig() as Configuration
-            ?? new Configuration();
-
-        this.Configuration.Initialize(this.PluginInterface);
-
-        this.mainWindow = new MainWindow(this);
-
-        this.commandManager.AddHandler(CommandName, new CommandInfo(this.OnCommand)
+        new TickScheduler(() =>
         {
-            HelpMessage = "Open the Gil Trade Tracker window."
-        });
+            C = EzConfig.Init<Configuration>();
 
-        this.PluginInterface.UiBuilder.Draw += this.DrawUi;
+            _configWindow = new ConfigWindow();
+            _mainWindow = new MainWindow(_configWindow);
+            _gilTracker = new GilTracker();
+            _gilTracker.TradeDetected += OnTradeDetected;
+
+            WindowSystem.AddWindow(_mainWindow);
+            WindowSystem.AddWindow(_configWindow);
+
+            Svc.Commands.AddHandler(CommandName, new CommandInfo(OnCommand)
+            {
+                HelpMessage = "Open the Gil Trade Tracker window."
+            });
+
+            Svc.PluginInterface.UiBuilder.Draw += DrawUi;
+            Svc.PluginInterface.UiBuilder.OpenMainUi += OpenMain;
+            Svc.PluginInterface.UiBuilder.OpenConfigUi += OpenConfig;
+        });
     }
 
-    private void OnCommand(string command, string args)
+    private void OnTradeDetected(string partnerName, long gilDelta)
     {
-        this.mainWindow.IsOpen = true;
+        if (gilDelta <= 0) return;
+
+        C.Entries.Add(new GilEntry
+        {
+            PlayerName = partnerName,
+            Amount = gilDelta,
+            Date = DateTime.Now,
+        });
+        EzConfig.Save();
     }
 
     private void DrawUi()
     {
-        this.mainWindow.Draw();
+        ChatQueue.Pump();
+        WindowSystem.Draw();
     }
 
-    public string GetCurrentTargetName()
-    {
-        var target = this.TargetManager.Target;
+    private void OpenMain() => _mainWindow.IsOpen = true;
 
-        if (target == null)
-            return string.Empty;
+    private void OpenConfig() => _configWindow.IsOpen = true;
 
-        return target.Name.ToString();
-    }
-
-    public void SaveConfig()
-    {
-        this.PluginInterface.SavePluginConfig(this.Configuration);
-    }
+    private void OnCommand(string command, string args) => _mainWindow.IsOpen ^= true;
 
     public void Dispose()
     {
-        this.PluginInterface.UiBuilder.Draw -= this.DrawUi;
-        this.commandManager.RemoveHandler(CommandName);
-        this.mainWindow.Dispose();
+        Svc.PluginInterface.UiBuilder.Draw -= DrawUi;
+        Svc.PluginInterface.UiBuilder.OpenMainUi -= OpenMain;
+        Svc.PluginInterface.UiBuilder.OpenConfigUi -= OpenConfig;
+        Svc.Commands.RemoveHandler(CommandName);
+        ChatQueue.Clear();
+        if (_gilTracker != null)
+        {
+            _gilTracker.TradeDetected -= OnTradeDetected;
+            _gilTracker.Dispose();
+        }
+        WindowSystem.RemoveAllWindows();
+        _mainWindow?.Dispose();
+        _configWindow?.Dispose();
+        ECommonsMain.Dispose();
+        P = null!;
     }
 }
