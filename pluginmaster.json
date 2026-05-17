@@ -3,12 +3,14 @@
     "Author": "elliethegator",
     "Name": "GilTradeTracker",
     "InternalName": "GilTradeTracker",
-    "AssemblyVersion": "1.0.0.0",
+    "AssemblyVersion": "1.0.0.2",
+    "DalamudApiLevel": 15,
     "Description": "Tracks gil trades and statistics.",
     "ApplicableVersion": "any",
     "RepoUrl": "https://github.com/elliethegator/GilTradeTracker",
     "IconUrl": "https://raw.githubusercontent.com/elliethegator/GilTradeTracker/master/images/icon.png",
     "DownloadLinkInstall": "https://github.com/elliethegator/GilTradeTracker/releases/latest/download/GilTradeTracker.zip",
+    "DownloadLinkUpdate": "https://github.com/elliethegator/GilTradeTracker/releases/latest/download/GilTradeTracker.zip",
     "Tags": [
       "gil",
       "tracker"
