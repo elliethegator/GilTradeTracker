@@ -9,8 +9,8 @@
     "ApplicableVersion": "any",
     "RepoUrl": "https://github.com/elliethegator/GilTradeTracker",
     "IconUrl": "https://raw.githubusercontent.com/elliethegator/GilTradeTracker/master/images/icon.png",
-    "DownloadLinkInstall": "https://github.com/elliethegator/GilTradeTracker/releases/latest/download/GilTradeTracker.zip",
-    "DownloadLinkUpdate": "https://github.com/elliethegator/GilTradeTracker/releases/latest/download/GilTradeTracker.zip",
+    "DownloadLinkInstall": "https://github.com/elliethegator/GilTradeTracker/releases/latest/download/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/elliethegator/GilTradeTracker/releases/latest/download/latest.zip",
     "Tags": [
       "gil",
       "tracker"
