@@ -47,6 +47,8 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnTradeDetected(string partnerName, long gilDelta)
     {
+        if (gilDelta < 0)
+            PayoutAutomation.NoteTradeOut(partnerName, -gilDelta);
         if (gilDelta <= 0) return;
 
         C.Entries.Add(new GilEntry

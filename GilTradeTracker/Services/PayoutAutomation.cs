@@ -20,11 +20,26 @@ public static unsafe class PayoutAutomation
 
     public static bool IsBusy => TaskManager.IsBusy;
 
+    public static string TargetName { get; private set; } = string.Empty;
+    public static long TargetTotal { get; private set; }
+    public static long AmountTraded { get; private set; }
+    public static long Remaining => Math.Max(0, TargetTotal - AmountTraded);
+
+    public static void NoteTradeOut(string partnerName, long amount)
+    {
+        if (!IsBusy) return;
+        if (!partnerName.Equals(TargetName, StringComparison.OrdinalIgnoreCase)) return;
+        AmountTraded += amount;
+    }
+
     public static void Abort() => TaskManager.Abort();
 
     public static void Pay(string targetNameWithWorld, long gilAmount)
     {
         if (gilAmount <= 0) return;
+        TargetName = targetNameWithWorld;
+        TargetTotal = gilAmount;
+        AmountTraded = 0;
         long remaining = gilAmount;
         while (remaining > 0)
         {

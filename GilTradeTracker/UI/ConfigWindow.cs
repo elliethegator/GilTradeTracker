@@ -5,11 +5,10 @@ namespace GilTradeTracker.UI;
 public sealed class ConfigWindow : Window, IDisposable
 {
     private const float InputWidth = 250f;
-    private const float MessageWidth = 380f;
 
     public ConfigWindow() : base("Gil Trade Tracker Settings")
     {
-        Size = new Vector2(500f, 460f);
+        Size = new Vector2(540f, 600f);
         SizeCondition = ImGuiCond.FirstUseEver;
     }
 
@@ -67,7 +66,7 @@ public sealed class ConfigWindow : Window, IDisposable
 
         var msg = C.ShoutMessage ?? string.Empty;
         ImGui.Text("Message");
-        if (ImGuiEx.InputTextWrapMultilineExpanding("##shoutmsg", ref msg, 500, 2, 6, (int)MessageWidth))
+        if (ImGuiEx.InputTextMultilineExpanding("##shoutmsg", ref msg, 2000, 4, 12))
         {
             C.ShoutMessage = msg;
             EzConfig.Save();

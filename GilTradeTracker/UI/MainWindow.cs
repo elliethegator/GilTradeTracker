@@ -49,11 +49,32 @@ public sealed class MainWindow : Window, IDisposable
     {
         DrawPotCard();
         DrawActionRow();
+        DrawPayoutSummary();
         ImGui.Spacing();
         DrawEntriesHeader();
         DrawEntriesTable();
         DrawAddEntryPopup();
         DrawPayoutConfirmPopup();
+    }
+
+    private static void DrawPayoutSummary()
+    {
+        if (PayoutAutomation.TargetTotal <= 0) return;
+
+        ImGui.Spacing();
+        using (ImRaii.PushColor(ImGuiCol.Text, Theme.Subtle))
+            ImGui.Text("Auto-traded payout:");
+        ImGui.SameLine();
+        using (ImRaii.PushColor(ImGuiCol.Text, Theme.Received))
+            ImGui.Text($"{PayoutAutomation.AmountTraded:N0}");
+        ImGui.SameLine();
+        ImGui.Text("/");
+        ImGui.SameLine();
+        using (ImRaii.PushColor(ImGuiCol.Text, Theme.Amber))
+            ImGui.Text($"{PayoutAutomation.TargetTotal:N0}");
+        ImGui.SameLine();
+        using (ImRaii.PushColor(ImGuiCol.Text, Theme.Subtle))
+            ImGui.Text($"gil to {PayoutAutomation.TargetName}");
     }
 
     private static void Status(string msg) => Svc.Chat.Print($"[GilTradeTracker] {msg}");
@@ -140,23 +161,40 @@ public sealed class MainWindow : Window, IDisposable
 
         ImGui.SameLine();
 
-        var targetName = GetCurrentTargetPlayerWithWorld();
-        var (_, _, fullPot) = PotCalc.Compute();
-        var canPayout = !string.IsNullOrEmpty(targetName) && fullPot > 0 && !PayoutAutomation.IsBusy;
-
-        if (ImGuiEx.IconButtonWithText(
-                FontAwesomeIcon.HandHoldingUsd, "Auto Trade Pot",
-                enabled: canPayout,
-                defaultColor: Theme.DangerBtn,
-                activeColor:  Theme.DangerBtnActive,
-                hoveredColor: Theme.DangerBtnHover,
-                size: btnSize))
+        if (PayoutAutomation.IsBusy)
         {
-            payoutTargetName = targetName;
-            payoutAmount = fullPot;
-            ImGui.OpenPopup(PayoutConfirmPopupId);
+            if (ImGuiEx.IconButtonWithText(
+                    FontAwesomeIcon.Stop, "Stop",
+                    defaultColor: Theme.DangerBtn,
+                    activeColor:  Theme.DangerBtnActive,
+                    hoveredColor: Theme.DangerBtnHover,
+                    size: btnSize))
+            {
+                PayoutAutomation.Abort();
+                Status("Payout aborted.");
+            }
+            ImGuiEx.Tooltip("Stop the queued payout steps.\nAny open trade window is left alone - close it manually if needed.");
         }
-        ImGuiEx.Tooltip(BuildPayoutTooltip(targetName, fullPot));
+        else
+        {
+            var targetName = GetCurrentTargetPlayerWithWorld();
+            var (_, _, fullPot) = PotCalc.Compute();
+            var canPayout = !string.IsNullOrEmpty(targetName) && fullPot > 0;
+
+            if (ImGuiEx.IconButtonWithText(
+                    FontAwesomeIcon.HandHoldingUsd, "Auto Trade Pot",
+                    enabled: canPayout,
+                    defaultColor: Theme.DangerBtn,
+                    activeColor:  Theme.DangerBtnActive,
+                    hoveredColor: Theme.DangerBtnHover,
+                    size: btnSize))
+            {
+                payoutTargetName = targetName;
+                payoutAmount = fullPot;
+                ImGui.OpenPopup(PayoutConfirmPopupId);
+            }
+            ImGuiEx.Tooltip(BuildPayoutTooltip(targetName, fullPot));
+        }
 
         if (ImGuiEx.IconButtonWithText(
                 FontAwesomeIcon.Plus, "Add Entry",
@@ -178,7 +216,6 @@ public sealed class MainWindow : Window, IDisposable
 
     private static string BuildPayoutTooltip(string targetName, long fullPot)
     {
-        if (PayoutAutomation.IsBusy) return "Payout already in progress...";
         if (string.IsNullOrEmpty(targetName)) return "Target a player first.";
         if (fullPot <= 0) return "Pot is 0 - nothing to pay.";
         return $"Pay {fullPot:N0} gil to {targetName}.\nHold Ctrl on the confirm screen to send.";
@@ -429,6 +466,7 @@ public sealed class MainWindow : Window, IDisposable
         var lines = msg.Split('\n')
             .Select(l => l.Replace("\r", string.Empty).Trim())
             .Where(l => l.Length > 0)
+            .SelectMany(ChunkLine)
             .ToList();
 
         if (lines.Count == 0)
@@ -475,6 +513,13 @@ public sealed class MainWindow : Window, IDisposable
 
         File.WriteAllText(exportPath, csv.ToString(), Encoding.UTF8);
         Status($"Exported to: {exportPath}");
+    }
+
+    private static IEnumerable<string> ChunkLine(string line)
+    {
+        const int max = 400;
+        for (var i = 0; i < line.Length; i += max)
+            yield return line.Substring(i, Math.Min(max, line.Length - i));
     }
 
     private static string EscapeCsv(string value)
